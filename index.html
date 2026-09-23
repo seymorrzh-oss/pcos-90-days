@@ -1,95 +1,14 @@
-<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#f7f6f2" />
-  <title>PCOS · 90 DAYS</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <main class="app">
-    <header class="hero card">
-      <div>
-        <p class="eyebrow">PCOS · 90 DAYS</p>
-        <h1 id="weekTitle">Week 1 · Day 1</h1>
-        <p class="muted" id="planDates"></p>
-      </div>
-      <button class="icon-btn" id="settingsBtn" aria-label="设置">⚙︎</button>
-
-      <div class="weight-row">
-        <div><span>START</span><strong id="startWeightText">76.6</strong><small>kg</small></div>
-        <div class="arrow">→</div>
-        <div><span>GOAL</span><strong id="goalWeightText">73.0</strong><small>kg</small></div>
-      </div>
-      <div class="progress"><i id="goalProgress"></i></div>
-      <div class="mini-grid">
-        <div><span>今日</span><b id="todayWeight">—</b><small> kg</small></div>
-        <div><span>7日均重</span><b id="avgWeight">—</b><small> kg</small></div>
-        <div><span>腰围</span><b id="waistText">—</b><small> cm</small></div>
-      </div>
-    </header>
-
-    <section class="pill card">
-      <div>
-        <p class="eyebrow">MEDICATION</p>
-        <h2 id="pillCycle">优思明 · Cycle 1</h2>
-        <p id="pillStatus" class="muted">今晚 22:00</p>
-      </div>
-      <button id="pillBtn" class="pill-check">💊 <span>记录</span></button>
-    </section>
-
-    <section>
-      <div class="section-title"><h2>TODAY</h2><span id="todayDate"></span></div>
-      <div class="today-grid">
-        <button class="quick card" data-open="weight"><span>⚖️</span><b>体重</b><small id="qWeight">记录</small></button>
-        <button class="quick card" data-open="food"><span>🍽️</span><b>饮食</b><small id="qFood">0 餐</small></button>
-        <button class="quick card" data-open="workout"><span>🏃</span><b>运动</b><small id="qWorkout">未记录</small></button>
-        <button class="quick card" data-open="body"><span>🙂</span><b>身体状态</b><small id="qBody">正常</small></button>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="section-title"><h2>今日饮食</h2><button class="text-btn" data-open="food">＋ 添加</button></div>
-      <div id="foodList" class="list empty">今天还没有饮食记录</div>
-    </section>
-
-    <section class="card">
-      <div class="section-title"><h2>今日运动</h2><button class="text-btn" data-open="workout">＋ 添加</button></div>
-      <div id="workoutList" class="list empty">今天还没有运动记录</div>
-    </section>
-
-    <section class="card">
-      <div class="section-title"><h2>最近体重</h2><span>看趋势，不看单日波动</span></div>
-      <div id="weightChart" class="chart"></div>
-    </section>
-
-    <section class="card">
-      <div class="section-title"><h2>本周</h2><span id="weekRange"></span></div>
-      <div class="stats">
-        <div><strong id="weekWorkout">0</strong><span>运动分钟</span></div>
-        <div><strong id="weekStrength">0</strong><span>力量次数</span></div>
-        <div><strong id="weekMeals">0</strong><span>饮食记录</span></div>
-        <div><strong id="weekPills">0/7</strong><span>服药记录</span></div>
-      </div>
-    </section>
-  </main>
-
-  <nav class="bottom">
-    <button class="active" data-scroll="top">⌂<span>Today</span></button>
-    <button data-open="food">🍽<span>Food</span></button>
-    <button class="plus" id="plusBtn">＋</button>
-    <button data-open="progress">⌁<span>Progress</span></button>
-    <button data-open="settings">☻<span>Me</span></button>
-  </nav>
-
-  <dialog id="modal">
-    <form method="dialog" id="modalForm">
-      <div class="modal-head"><h2 id="modalTitle">记录</h2><button value="cancel" class="icon-btn">×</button></div>
-      <div id="modalBody"></div>
-    </form>
-  </dialog>
-
-  <script src="app.js"></script>
-</body>
-</html>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f7f6f2"><title>PCOS · 90 DAYS</title><link rel="stylesheet" href="style.css"></head>
+<body><main class="app">
+<section class="card hero"><p class="eyebrow">PCOS · 90 DAYS</p><h1 id="dayTitle">Week 1 · Day 1</h1><p class="muted">2026.09.23 开始 · 12周生活方式管理</p><div class="weights"><div><small>START</small><b>76.6</b><span>kg</span></div><i>→</i><div><small>GOAL</small><b>73.0</b><span>kg</span></div></div></section>
+<section class="card clock"><div><p class="eyebrow">LOCAL TIME · 本机时间</p><h2 id="clock">--:--:--</h2><p class="muted" id="date"></p></div><div class="clock-status"><b id="planState"></b><span id="planCountdown"></span></div></section>
+<section class="card pill"><div><p class="eyebrow">MEDICATION</p><h2 id="cycle">优思明 · Cycle 1</h2><p class="muted" id="pillStatus">今晚 22:00</p><small id="pillHint"></small></div><button id="pillBtn">💊 打卡</button></section>
+<div class="title"><h2>TODAY</h2><span id="today"></span></div>
+<section class="grid"><button class="card quick" data-add="weight">⚖️<b>体重</b><small id="weightMini">记录</small></button><button class="card quick" data-add="food">🍽️<b>饮食</b><small id="foodMini">0 餐</small></button><button class="card quick" data-add="workout">🏃<b>运动</b><small id="workoutMini">未记录</small></button><button class="card quick" data-add="body">🙂<b>身体状态</b><small>记录</small></button></section>
+<section class="card"><div class="title inner"><h2>今日饮食</h2><button class="link" data-add="food">＋ 添加</button></div><div id="foods" class="empty">今天还没有饮食记录</div></section>
+<section class="card"><div class="title inner"><h2>今日运动</h2><button class="link" data-add="workout">＋ 添加</button></div><div id="workouts" class="empty">今天还没有运动记录</div></section>
+<section class="card"><div class="title inner"><h2>最近体重</h2><button class="link" data-add="weight">＋ 记录</button></div><div id="weights" class="empty">还没有体重记录</div></section>
+</main>
+<nav><button>⌂<small>Today</small></button><button data-add="food">🍽<small>Food</small></button><button class="plus" data-add="food">＋</button><button data-add="weight">⌁<small>Progress</small></button><button id="settings">☻<small>Me</small></button></nav>
+<dialog id="modal"><div class="modalHead"><h2 id="modalTitle"></h2><button id="close">×</button></div><div id="modalBody"></div></dialog>
+<script src="app.js"></script></body></html>

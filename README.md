@@ -1,30 +1,19 @@
-# PCOS 90 Days — V1.0
+# PCOS 90 Days V1.2
 
-一个移动端优先的 PCOS 90 天生活方式追踪网页。
+## 更新
+- 本机时间：实时日期、星期、HH:mm:ss，每秒更新。
+- 优思明：每天 **22:00（设备本机时间）后**才开放打卡，之前按钮置灰，并显示倒计时；停药 7 天自动禁用。
+- 饮食：输入实际食物和份量后，网页用内置食物库自动估算 kcal 区间并分析饮食结构。
+- 支持“可乐没喝 / 未喝”等备注，尽量按实际摄入计算。
+- 继续支持体重、运动、身体状态、本地 localStorage 保存。
 
-## V1.0
-- 90 天 / 12 周 Dashboard
-- 起始体重、目标体重、7 日均重、腰围
-- 每日饮食：按“实际吃掉的量”记录
-- 每日运动：爬坡 / 力量 / 步行
-- 身体状态：出血、头痛、恶心、便秘、小腿酸痛等
-- 优思明 21 天服药 + 7 天停药周期显示
-- 本周运动分钟、力量次数、饮食记录、服药记录
-- 最近 14 次体重趋势图
-- localStorage 本机保存
-- JSON 数据备份导出
+## 关于真正的 ChatGPT 式饮食分析
+当前 GitHub Pages 是纯静态网页，因此 V1.2 使用**离线本地分析器**。它无需 API、免费且不会暴露密钥。
 
-## 使用
-将 `index.html`、`style.css`、`app.js` 上传到 GitHub 仓库根目录，然后开启 GitHub Pages 即可。
+如果把 OpenAI API Key 直接写进 `app.js`，访问网页的人都能看到并盗用，所以不能这样做。未来若需要真正的 AI 对话分析，应增加安全后端/Serverless Function，由后端保存密钥。
 
-首次打开后可在右上角设置：
-- 计划开始日期（默认 2026-09-23）
-- 起始体重（默认 76.6 kg）
-- 阶段目标（默认 73.0 kg）
-- 优思明时间（默认 22:00）
-- 腰围
+## GitHub
+上传并覆盖 `index.html`、`style.css`、`app.js`、`README.md`。
 
-> 本网页用于个人记录，不替代医生的诊疗建议。
-
-## GitHub commit
-`feat: build PCOS 90-day lifestyle tracking dashboard`
+Commit:
+`feat: add 22:00 pill lock, local clock and food analysis`
