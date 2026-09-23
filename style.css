@@ -3,3 +3,5 @@
 .deletable{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;touch-action:pan-y}
 .holdHint{display:block;margin-top:8px;font-size:10px;color:#bbb;opacity:.72}
 .deletable:active{background:#faf9f6}
+.analysisBtn{border:0;border-radius:13px;background:var(--accent);color:#fff;padding:10px 12px;font-weight:800}.analysisBtn:disabled{background:#eee;color:#aaa}.daily-card .inner{gap:12px}.dailyResult{display:grid;gap:10px}.dailyPart{background:#faf9f6;border:1px solid var(--line);border-radius:15px;padding:12px}.dailyPart b{display:block;margin-bottom:5px}.dailyPart p{margin:0;color:var(--muted);font-size:13px;line-height:1.6}.durationFields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:380px){.daily-card .inner{align-items:flex-start;flex-direction:column}.analysisBtn{width:100%}}
