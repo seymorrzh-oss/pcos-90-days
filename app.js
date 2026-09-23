@@ -1,7 +1,7 @@
 const STORE="pcos90-data"; // 永久固定：后续版本不要改
-const START="2026-09-23", PILL_HOUR=22, ANALYSIS_HOUR=21;
+const START="2026-09-23", ANALYSIS_HOUR=21;
 const COLLECTIONS=["weights","foods","workouts","body","sleeps","pills","dailyAnalyses"];
-const emptyDB=()=>({schema:5,settings:{startDate:START,startWeight:76.6,goalWeight:73,pillTime:"22:00"},weights:[],foods:[],workouts:[],body:[],sleeps:[],pills:[],dailyAnalyses:[],deleted:[]});
+const emptyDB=()=>({schema:5,settings:{startDate:START,startWeight:76.6,goalWeight:73},weights:[],foods:[],workouts:[],body:[],sleeps:[],pills:[],dailyAnalyses:[],deleted:[]});
 const $=s=>document.querySelector(s), esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 function localDate(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function safeParse(x){try{return JSON.parse(x)}catch{return null}}
@@ -9,13 +9,13 @@ function norm(src){let d=emptyDB();if(!src||typeof src!=="object")return d;[...C
 function stable(v){if(v==null)return"";if(typeof v!=="object")return String(v);if(Array.isArray(v))return v.map(stable).join("|");return Object.keys(v).sort().filter(k=>k!=="id"&&k!=="analysis").map(k=>`${k}:${stable(v[k])}`).join("|")}
 function recordFingerprint(x,type){
  if(typeof x==="string")return `${type}|${x}`;
- const fields={food:["date","time","meal","items","note"],workout:["date","time","type","minutes","detail","note"],weight:["date","time","value"],body:["date","time","text","note"],sleep:["date","hours","minutes"],pill:["date"]}[type];
+ const fields={food:["date","time","meal","items","note"],workout:["date","time","type","minutes","detail","note"],weight:["date","time","value"],body:["date","time","text","note"],sleep:["date","hours","minutes"]}[type];
  return `${type}|${(fields||Object.keys(x||{}).sort()).map(k=>stable(x?.[k])).join("|")}`
 }
 function legacyFingerprint(x,type){return typeof x==="string"?`${type}|${x}`:`${type}|${x?.date||""}|${x?.time||""}|${x?.meal||""}|${x?.items||x?.value||x?.type||x?.text||""}|${x?.note||""}`}
 function recordFingerprints(x,type){return [...new Set([recordFingerprint(x,type),legacyFingerprint(x,type)])]}
 function isDeleted(dead,x,type){return recordFingerprints(x,type).some(fp=>dead.has(fp))}
-function typeForCollection(k){return({foods:"food",workouts:"workout",weights:"weight",body:"body",sleeps:"sleep",pills:"pill"})[k]||k}
+function typeForCollection(k){return({foods:"food",workouts:"workout",weights:"weight",body:"body",sleeps:"sleep"})[k]||k}
 function merge(a,b){
  let d=norm(a),incoming=norm(b),dead=new Set([...(d.deleted||[]),...(incoming.deleted||[])]);d.deleted=[...dead];
  COLLECTIONS.forEach(k=>{if(k==="dailyAnalyses"){incoming[k].forEach(x=>{let i=d[k].findIndex(y=>y.date===x.date);if(i<0)d[k].push(x)});return}let type=typeForCollection(k),seen=new Set(d[k].map(x=>recordFingerprint(x,type)));incoming[k].forEach(x=>{let fp=recordFingerprint(x,type);if(!isDeleted(dead,x,type)&&!seen.has(fp)){d[k].push(x);seen.add(fp)}});d[k]=d[k].filter(x=>!isDeleted(dead,x,type))});
@@ -39,7 +39,7 @@ function migrate(){
    if(k===STORE||k===MIGRATION_FLAG||known.includes(k))continue;
    if(/pcos.*90|90.*pcos/i.test(k)){
      let v=safeParse(localStorage.getItem(k));
-     if(v&&typeof v==="object"&&(v.weights||v.foods||v.pills)){
+     if(v&&typeof v==="object"&&(v.weights||v.foods||v.workouts||v.body||v.sleeps)){
        d=merge(d,norm(v));found.push(k)
      }
    }
@@ -53,30 +53,18 @@ let migrated=migrate(), db=migrated.d;
 function save(){db=norm(db);db.schema=5;localStorage.setItem(STORE,JSON.stringify(db));render()}
 function startMoment(){let [y,m,d]=(db.settings.startDate||START).split("-").map(Number);return new Date(y,m-1,d)}
 function dayFor(dateStr){let [y,m,d]=dateStr.split("-").map(Number);return Math.floor((new Date(y,m-1,d)-startMoment())/86400000)+1}
-function cycleFor(dateStr=localDate()){let n=dayFor(dateStr);if(n<1)return {valid:false};let cd=(n-1)%28+1;return {valid:true,n:Math.floor((n-1)/28)+1,cd,on:cd<=21}}
-function pillMoment(n=new Date()){return new Date(n.getFullYear(),n.getMonth(),n.getDate(),PILL_HOUR,0,0)}
 function analysisMoment(n=new Date()){return new Date(n.getFullYear(),n.getMonth(),n.getDate(),ANALYSIS_HOUR,0,0)}
 function tick(){
  let n=new Date(),pad=x=>String(x).padStart(2,"0"),wd=["日","一","二","三","四","五","六"],open=n>=startMoment();
  $("#clock").textContent=`${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;$("#dateText").textContent=`${n.getFullYear()}年${n.getMonth()+1}月${n.getDate()}日 · 星期${wd[n.getDay()]} · 当前设备`;
  $("#planState").textContent=open?"90天计划进行中":"打卡尚未开放";$("#planCountdown").textContent=open?`Day ${Math.max(1,dayFor(localDate(n)))}`:"等待开始";
- document.querySelectorAll("[data-add]").forEach(b=>b.classList.toggle("disabled",!open));updatePill(n);updateAnalysisGate(n)
+ document.querySelectorAll("[data-add]").forEach(b=>b.classList.toggle("disabled",!open));updateAnalysisGate(n)
 }
 function countdown(sec){sec=Math.max(0,Math.floor(sec));return `${String(Math.floor(sec/3600)).padStart(2,"0")}:${String(Math.floor(sec%3600/60)).padStart(2,"0")}:${String(sec%60).padStart(2,"0")}`}
 function updateAnalysisGate(n=new Date()){
  let btn=$("#analysisBtn"),out=$("#analysisCountdown"),can=n>=analysisMoment(n)&&n>=startMoment(),done=db.dailyAnalyses.some(x=>x.date===localDate(n));
- btn.disabled=!can;btn.textContent=done?"↻ 重新分析":"✨ 生成今日分析";
+ btn.disabled=!can;btn.textContent=can?(done?"↻ 重新分析":"✨ 今日分析"):"今日分析 · 21:00 后开放";
  out.textContent=can?"根据今天已经记录的数据生成；缺少的项目会显示“今日未记录”。":`今日分析将在 ${countdown((analysisMoment(n)-n)/1000)} 后开放`;
-}
-function updatePill(n=new Date()){
- let c=cycleFor(),done=db.pills.some(x=>(typeof x==="string"?x:x.date)===localDate()),btn=$("#pillBtn");
- if(!c.valid){btn.disabled=true;btn.classList.add("locked");return}
- $("#cycle").textContent=`优思明 · Cycle ${c.n}`;
- if(!c.on){btn.disabled=true;btn.classList.add("locked");btn.textContent="停药期";$("#pillStatus").textContent=`Break · Day ${c.cd-21}/7`;$("#pillHint").textContent="如需修正历史记录，请使用「补记」";return}
- $("#pillStatus").textContent=`Day ${c.cd} · ${db.settings.pillTime}`;
- if(done){btn.disabled=false;btn.classList.remove("locked");btn.textContent="✓ 已打卡";$("#pillHint").textContent="再次点击可撤销今天的误打卡";return}
- let can=n>=pillMoment(n)&&n>=startMoment();btn.disabled=!can;btn.classList.toggle("locked",!can);btn.textContent=can?"💊 打卡":"💊 22:00开放";
- if(can)$("#pillHint").textContent="现在可以打卡";else{let x=Math.max(0,Math.floor((pillMoment(n)-n)/1000));$("#pillHint").textContent=`还有 ${String(Math.floor(x/3600)).padStart(2,"0")}:${String(Math.floor(x%3600/60)).padStart(2,"0")}:${String(x%60).padStart(2,"0")}`}
 }
 // kcal 以常见份量/每单位估算；品牌餐品没有可靠官方值时只给区间
 const FOODS=[
@@ -213,22 +201,26 @@ function bindLongPress(){
 }
 
 function activeFor(k,type,date){let dead=new Set(db.deleted||[]);return db[k].filter(x=>(!date||x.date===date)&&!isDeleted(dead,x,type))}
+function sleepParts(s){let total=Number.isFinite(+s?.durationMinutes)?+s.durationMinutes:(+s?.hours||0)*60+(+s?.minutes||0);return {total,hours:Math.floor(total/60),minutes:total%60}}
 function generateDailyAnalysis(date=localDate()){
- let foods=activeFor("foods","food",date),workouts=activeFor("workouts","workout",date),weights=activeFor("weights","weight",date),sleeps=activeFor("sleeps","sleep",date),parts=[];
- if(foods.length){let ranges=foods.map(x=>x.analysis?.kcal?.match(/(\d+)\D+(\d+)\s*kcal/i)).filter(Boolean),lo=ranges.reduce((a,m)=>a+(+m[1]||0),0),hi=ranges.reduce((a,m)=>a+(+m[2]||0),0),names=foods.map(x=>x.items).join("、"),meals=[...new Set(foods.map(x=>x.meal).filter(Boolean))].join("、"),protein=/鸡蛋|蛋|鸡|牛|肉|鱼|虾|豆腐|牛奶|拿铁|馄饨|云吞/.test(names),veg=/蔬菜|青菜|西兰花|菠菜|生菜|水果|苹果|橙|香蕉/.test(names),carb=/米饭|面|馄饨|云吞|饭|薯|汉堡|卷/.test(names),rich=/炸|咖喱|奶茶|薯条/.test(names);parts.push({title:"🍽️ 饮食",text:`今日记录：${names}。${ranges.length?`可估算部分合计约 ${lo}–${hi} kcal。`:"部分食物暂无法估算热量。"}${meals?` 已记录餐次：${meals}。`:""}${protein?" 有蛋白质来源。":" 蛋白质来源暂未明确。"}${veg?" 已记录蔬菜或水果。":" 蔬菜和膳食纤维记录偏少，下一餐可正常增加一份蔬菜。"}${carb?" 已包含主食或碳水来源。":" 主食记录暂未明确。"}${rich?" 今天也有油脂或能量较集中的食物，后续正常吃，可优先安排蔬菜和蛋白质，主食按饥饿程度调整。":""}`})}else parts.push({title:"🍽️ 饮食",text:"今日未记录。"});
+ let foods=activeFor("foods","food",date),workouts=activeFor("workouts","workout",date),weights=activeFor("weights","weight",date),sleeps=activeFor("sleeps","sleep",date),bodies=activeFor("body","body",date),parts=[],sleep=sleeps.length?sleepParts(sleeps[sleeps.length-1]):null,workoutMins=workouts.reduce((a,x)=>a+(+x.minutes||0),0),weight=weights[weights.length-1];
+ parts.push({title:"✨ 今日概览",text:`饮食：${foods.length?`${foods.length} 餐`:"未记录"} · 睡眠：${sleep?`${sleep.hours}h ${sleep.minutes}m`:"未记录"} · 运动：${workouts.length?`${workoutMins} min`:"未记录"} · 体重：${weight?`${weight.value} kg`:"未记录"} · 身体状态：${bodies.length?`${bodies.length} 条`:"未记录"}`});
+ if(foods.length){let ranges=foods.map(x=>x.analysis?.kcal?.match(/(\d+)\D+(\d+)\s*kcal/i)).filter(Boolean),lo=ranges.reduce((a,m)=>a+(+m[1]||0),0),hi=ranges.reduce((a,m)=>a+(+m[2]||0),0),names=foods.map(x=>x.items).join("、"),meals=[...new Set(foods.map(x=>x.meal).filter(Boolean))].join("、"),protein=/鸡蛋|蛋|鸡|牛|肉|鱼|虾|豆腐|牛奶|拿铁|馄饨|云吞/.test(names),veg=/蔬菜|青菜|西兰花|菠菜|生菜|水果|苹果|橙|香蕉/.test(names),carb=/米饭|面|馄饨|云吞|饭|薯|汉堡|卷/.test(names),rich=/炸|咖喱|奶茶|薯条|可乐/.test(names);parts.push({title:"🍽️ 饮食结构",text:`今日记录：${names}。${ranges.length?`可估算部分合计约 ${lo}–${hi} kcal。`:"部分食物暂无法估算热量。"}${meals?` 已记录餐次：${meals}。`:""}${protein?" 有蛋白质来源。":" 蛋白质来源暂未明确。"}${veg?" 已记录蔬菜或水果。":" 蔬菜和膳食纤维记录偏少，下一餐可正常增加一份蔬菜。"}${carb?" 已包含主食或碳水来源。":" 主食记录暂未明确。"}${rich?" 今天也有油脂或糖分较集中的食物，后续正常吃，可优先安排蔬菜和蛋白质，主食按饥饿程度调整。":""}`})}else parts.push({title:"🍽️ 饮食结构",text:"今天暂未记录饮食。"});
  if(workouts.length){let mins=workouts.reduce((a,x)=>a+(+x.minutes||0),0),types=[...new Set(workouts.map(x=>x.type||"运动"))].join("、"),details=workouts.map(x=>x.detail).filter(Boolean).join("；");parts.push({title:"🏃 运动",text:`今日完成约 ${mins} 分钟运动，类型：${types}。${details?` ${details}`:""}`})}else parts.push({title:"🏃 运动",text:"今日未记录。"});
  if(weights.length){let current=weights[weights.length-1],previous=activeFor("weights","weight").filter(x=>x.date<date).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0],delta=previous?(+current.value-+previous.value):null;parts.push({title:"⚖️ 体重",text:`今日 ${current.value} kg。${previous?`较上一次记录变化 ${delta>=0?"+":""}${delta.toFixed(2)} kg。`:"暂无更早记录可比较。"} 单日体重会受到水分、饮食和排便等影响，更适合观察一段时间趋势。`})}else parts.push({title:"⚖️ 体重",text:"今日未记录。"});
- if(sleeps.length){let s=sleeps[sleeps.length-1],total=(+s.hours||0)*60+(+s.minutes||0),level=total>=420?"时长基本充足":total>=360?"接近常见充足时长，可继续观察自己的精神状态":"时长偏短，今晚可以尽量给休息留出更完整的时间";parts.push({title:"😴 睡眠",text:`昨晚睡眠 ${s.hours}小时${s.minutes}分钟，${level}。`})}else parts.push({title:"😴 睡眠",text:"今日未记录。"});
+ if(sleep){let level=sleep.total>=420?"时长基本充足":sleep.total>=360?"接近常见充足时长，可以继续观察自己的精神状态":"时长偏短，今晚可以尽量给休息留出更完整的时间";parts.push({title:"😴 睡眠",text:`今天记录睡眠 ${sleep.hours} 小时 ${sleep.minutes} 分钟，${level}。`})}else parts.push({title:"😴 睡眠",text:"今天暂未记录睡眠。"});
+ if(bodies.length){parts.push({title:"🙂 身体状态",text:`今天记录：${bodies.map(x=>x.text).filter(Boolean).join("；")}。这只是当天主观状态摘要，不用于医学诊断。`})}else parts.push({title:"🙂 身体状态",text:"今天暂未记录身体状态。"});
  let result={date,generatedAt:new Date().toISOString(),parts},i=db.dailyAnalyses.findIndex(x=>x.date===date);if(i>=0)db.dailyAnalyses[i]=result;else db.dailyAnalyses.push(result);save()
 }
 
 function render(){
  let d=Math.max(1,dayFor(localDate())),w=Math.ceil(d/7);$("#dayTitle").textContent=`Week ${w} · Day ${d}`;$("#startW").textContent=db.settings.startWeight;$("#goalW").textContent=db.settings.goalWeight;
- let dead=new Set(db.deleted||[]); let fs=activeFor("foods","food",localDate()),ws=activeFor("workouts","workout",localDate()),ss=activeFor("sleeps","sleep",localDate()),ww=[...activeFor("weights","weight",localDate())].reverse()[0];
- $("#foodMini").textContent=`${fs.length} 餐`;$("#workoutMini").textContent=ws.length?`${ws.reduce((a,x)=>a+(+x.minutes||0),0)} min`:"未记录";$("#weightMini").textContent=ww?`${ww.value} kg`:"记录";$("#sleepMini").textContent=ss.length?`${ss[ss.length-1].hours}h ${ss[ss.length-1].minutes}m`:"未记录";
+ let fs=activeFor("foods","food",localDate()),ws=activeFor("workouts","workout",localDate()),ss=activeFor("sleeps","sleep",localDate()),bs=activeFor("body","body",localDate()),ww=[...activeFor("weights","weight",localDate())].reverse()[0],todaySleep=ss.length?sleepParts(ss[ss.length-1]):null;
+ $("#foodMini").textContent=`${fs.length} 餐`;$("#workoutMini").textContent=ws.length?`${ws.reduce((a,x)=>a+(+x.minutes||0),0)} min`:"未记录";$("#weightMini").textContent=ww?`${ww.value} kg`:"记录";$("#sleepMini").textContent=todaySleep?`${todaySleep.hours}h ${todaySleep.minutes}m`:"未记录";
  $("#foods").innerHTML=fs.length?fs.map((x,i)=>`<div class="entry deletable" data-delete-type="food" data-delete-key="${esc(recordKey(x,"food",db.foods.indexOf(x)))}"><div class="entryTop"><b>${esc(x.meal||"饮食")}</b><span>${esc(x.time||"")}</span></div><p>${esc(x.items||"")}</p>${x.note?`<span class="tag">${esc(x.note)}</span>`:""}${x.analysis?`<div class="analysis"><b>${esc(x.analysis.kcal)}</b><p>${esc(x.analysis.text)}</p></div>`:""}<small class="holdHint">长按可删除</small></div>`).join(""):"今天还没有饮食记录";
  $("#workouts").innerHTML=ws.length?ws.map(x=>`<div class="entry deletable" data-delete-type="workout" data-delete-key="${esc(recordKey(x,"workout",db.workouts.indexOf(x)))}"><div class="entryTop"><b>${esc(x.type||"运动")}</b><span>${esc(x.minutes||"")} min</span></div><p>${esc(x.detail||"")}</p><small class="holdHint">长按可删除</small></div>`).join(""):"今天还没有运动记录";
- let sleeps=[...activeFor("sleeps","sleep")].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,10);$("#sleeps").innerHTML=sleeps.length?sleeps.map(x=>`<div class="entry deletable" data-delete-type="sleep" data-delete-key="${esc(recordKey(x,"sleep",db.sleeps.indexOf(x)))}"><div class="entryTop"><b>${esc(x.hours)}h ${esc(x.minutes)}m</b><span>${esc(x.date)}</span></div><small class="holdHint">长按可删除</small></div>`).join(""):"还没有睡眠记录";
+ $("#sleeps").innerHTML=ss.length?ss.map(x=>{let t=sleepParts(x);return `<div class="entry deletable" data-delete-type="sleep" data-delete-key="${esc(recordKey(x,"sleep",db.sleeps.indexOf(x)))}"><div class="entryTop"><b>${esc(t.hours)} 小时 ${esc(t.minutes)} 分钟</b><span>${esc(x.date)}</span></div>${x.note?`<p>${esc(x.note)}</p>`:""}<small class="holdHint">长按可删除</small></div>`}).join(""):"今天还没有睡眠记录";
+ $("#bodyStates").innerHTML=bs.length?bs.map(x=>`<div class="entry deletable" data-delete-type="body" data-delete-key="${esc(recordKey(x,"body",db.body.indexOf(x)))}"><div class="entryTop"><b>身体状态</b><span>${esc(x.time||"")}</span></div><p>${esc(x.text||"")}</p><small class="holdHint">长按可删除</small></div>`).join(""):"今天还没有身体状态记录";
  let weights=[...activeFor("weights","weight")].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,10);$("#weights").innerHTML=weights.length?weights.map(x=>`<div class="entry deletable" data-delete-type="weight" data-delete-key="${esc(recordKey(x,"weight",db.weights.indexOf(x)))}"><div class="entryTop"><b>${esc(x.value)} kg</b><span>${esc(x.date)}</span></div><small class="holdHint">长按可删除</small></div>`).join(""):"还没有体重记录";
  let daily=db.dailyAnalyses.find(x=>x.date===localDate());$("#dailyAnalysis").className=daily?"dailyResult":"empty";$("#dailyAnalysis").innerHTML=daily?daily.parts.map(p=>`<div class="dailyPart"><b>${esc(p.title)}</b><p>${esc(p.text)}</p></div>`).join(""):"今天还没有生成分析";
  bindLongPress();$("#migrationNote").textContent=migrated.found.length
@@ -236,22 +228,21 @@ function render(){
  : (migrated.alreadyDone
    ? "旧版迁移已完成。现在只使用 pcos90-data；删除的记录不会再被旧版本自动恢复。"
    : "未发现可迁移的旧数据。现在固定使用 pcos90-data。");
- updatePill();updateAnalysisGate()
+ updateAnalysisGate()
 }
 const modal=$("#modal");$("#close").onclick=()=>modal.close();
 function dateField(v=localDate()){return `<div class="field"><label>日期</label><input id="recordDate" type="date" value="${v}" min="${db.settings.startDate}" max="${localDate()}"></div>`}
 function open(k,date=localDate()){
- $("#modalTitle").textContent={food:"记录饮食",weight:"记录体重",workout:"记录运动",sleep:"记录睡眠",body:"身体状态",pill:"补记优思明"}[k]||"记录";let b=$("#modalBody");
+ $("#modalTitle").textContent={food:"记录饮食",weight:"记录体重",workout:"记录运动",sleep:"记录睡眠",body:"身体状态"}[k]||"记录";let b=$("#modalBody");
  if(k==="food")b.innerHTML=`${dateField(date)}<div class="field"><label>餐次</label><select id="meal"><option>早餐</option><option selected>午餐</option><option>晚餐</option><option>加餐</option></select></div><div class="field"><label>实际吃了什么</label><textarea id="items" placeholder="例：水煮蛋1个、热拿铁280ml"></textarea></div><div class="field"><label>备注</label><input id="note" placeholder="例：可乐没喝 / 面剩1/4 / 只吃3个"></div><div class="note">会按实际摄入做本地热量区间估算。品牌餐品没有可靠精确数据时只显示估算区间。</div><button class="save" onclick="addFood()">保存并分析</button>`;
  if(k==="weight")b.innerHTML=`${dateField(date)}<div class="field"><label>体重 kg</label><input id="val" type="number" step=".05" inputmode="decimal"></div><button class="save" onclick="addWeight()">保存</button>`;
  if(k==="workout")b.innerHTML=`${dateField(date)}<div class="field"><label>类型</label><select id="type"><option>跑步机爬坡</option><option>力量 · Full Body</option><option>步行</option><option>其他</option></select></div><div class="field"><label>分钟</label><input id="mins" type="number"></div><div class="field"><label>详情</label><textarea id="detail" placeholder="坡度9–10，速度3.5 km/h…"></textarea></div><button class="save" onclick="addWorkout()">保存</button>`;
- if(k==="sleep")b.innerHTML=`${dateField(date)}<div class="durationFields"><div class="field"><label>小时</label><input id="sleepHours" type="number" min="0" max="24" step="1" inputmode="numeric" value="7"></div><div class="field"><label>分钟（0–59）</label><input id="sleepMinutes" type="number" min="0" max="59" step="1" inputmode="numeric" value="0"></div></div><button class="save" onclick="addSleep()">保存</button>`;
+ if(k==="sleep")b.innerHTML=`${dateField(date)}<div class="durationFields"><div class="field"><label>小时</label><input id="sleepHours" type="number" min="0" max="24" step="1" inputmode="numeric" value="7"></div><div class="field"><label>分钟（0–59）</label><input id="sleepMinutes" type="number" min="0" max="59" step="1" inputmode="numeric" value="0"></div></div><div class="field"><label>备注（可选）</label><input id="sleepNote" placeholder="例：夜间醒来一次"></div><button class="save" onclick="addSleep()">保存</button>`;
  if(k==="body")b.innerHTML=`${dateField(date)}<div class="field"><label>状态</label><textarea id="state" placeholder="例：点滴出血、头痛、便秘、腿部酸痛…"></textarea></div><button class="save" onclick="addBody()">保存</button>`;
- if(k==="pill")b.innerHTML=`${dateField(date)}<div class="note">这里用于补记过去已经实际服用的优思明。当天正常打卡仍需等本机时间 22:00 后。</div><button class="save" onclick="backfillPill()">确认该日已服药</button>`;
  modal.showModal()
 }
 function openBackfill(){
- $("#modalTitle").textContent="补记历史记录";$("#modalBody").innerHTML=`<div class="note">选择要补记的内容。下一步可选择过去日期。</div><div class="picker"><button onclick="open('weight')">⚖️ 体重</button><button onclick="open('food')">🍽️ 饮食</button><button onclick="open('workout')">🏃 运动</button><button onclick="open('sleep')">😴 睡眠</button><button onclick="open('body')">🙂 身体状态</button><button onclick="open('pill')">💊 优思明</button></div>`;modal.showModal()
+ $("#modalTitle").textContent="补记历史记录";$("#modalBody").innerHTML=`<div class="note">选择要补记的内容。下一步可选择过去日期。</div><div class="picker"><button onclick="open('weight')">⚖️ 体重</button><button onclick="open('food')">🍽️ 饮食</button><button onclick="open('workout')">🏃 运动</button><button onclick="open('sleep')">😴 睡眠</button><button onclick="open('body')">🙂 身体状态</button></div>`;modal.showModal()
 }
 document.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>open(b.dataset.add));$("#backfillBtn").onclick=openBackfill;$("#navPlus").onclick=openBackfill;
 window.open=open;
@@ -259,11 +250,9 @@ function addActive(k,type,x){let marks=new Set(recordFingerprints(x,type));db.de
 window.addFood=()=>{let items=$("#items").value.trim(),note=$("#note").value.trim(),date=$("#recordDate").value;if(!items||!date)return;addActive("foods","food",{id:"food-"+Date.now()+"-"+Math.random().toString(36).slice(2),date,meal:$("#meal").value,items,note,time:date===localDate()?new Date().toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}):"补记",analysis:analyze(items,note)});save();modal.close()};
 window.addWeight=()=>{let v=+$("#val").value,date=$("#recordDate").value;if(!v||!date)return;db.weights=db.weights.filter(x=>x.date!==date);addActive("weights","weight",{date,value:v});save();modal.close()};
 window.addWorkout=()=>{let m=+$("#mins").value,date=$("#recordDate").value;if(!m||!date)return;addActive("workouts","workout",{id:"workout-"+Date.now()+"-"+Math.random().toString(36).slice(2),date,type:$("#type").value,minutes:m,detail:$("#detail").value});save();modal.close()};
-window.addSleep=()=>{let h=+$("#sleepHours").value,m=+$("#sleepMinutes").value,date=$("#recordDate").value;if(!date||!Number.isInteger(h)||!Number.isInteger(m)||h<0||h>24||m<0||m>59||(h===24&&m>0)){alert("请输入有效睡眠时间，分钟需为 0–59。");return}db.sleeps=db.sleeps.filter(x=>x.date!==date);addActive("sleeps","sleep",{date,hours:h,minutes:m});save();modal.close()};
-window.addBody=()=>{let v=$("#state").value.trim(),date=$("#recordDate").value;if(!v||!date)return;addActive("body","body",{id:"body-"+Date.now()+"-"+Math.random().toString(36).slice(2),date,text:v});save();modal.close()};
-window.backfillPill=()=>{let date=$("#recordDate").value,c=cycleFor(date);if(!date||!c.valid||!c.on){alert("该日期不属于优思明 21 天服药期。");return}if(!db.pills.some(x=>(typeof x==="string"?x:x.date)===date))addActive("pills","pill",{date,backfilled:true});save();modal.close()};
-$("#pillBtn").onclick=()=>{let t=localDate(),i=db.pills.findIndex(x=>(typeof x==="string"?x:x.date)===t);if(i>=0)db.pills.splice(i,1);else if(new Date()>=pillMoment())addActive("pills","pill",{date:t,time:new Date().toISOString()});save()};
+window.addSleep=()=>{let h=+$("#sleepHours").value,m=+$("#sleepMinutes").value,date=$("#recordDate").value,note=$("#sleepNote").value.trim();if(!date||!Number.isInteger(h)||!Number.isInteger(m)||h<0||h>24||m<0||m>59||(h===24&&m>0)){alert("请输入有效睡眠时间，分钟需为 0–59。");return}db.sleeps=db.sleeps.filter(x=>x.date!==date);addActive("sleeps","sleep",{id:"sleep-"+Date.now()+"-"+Math.random().toString(36).slice(2),date,durationMinutes:h*60+m,hours:h,minutes:m,note});save();modal.close()};
+window.addBody=()=>{let v=$("#state").value.trim(),date=$("#recordDate").value;if(!v||!date)return;addActive("body","body",{id:"body-"+Date.now()+"-"+Math.random().toString(36).slice(2),date,time:date===localDate()?new Date().toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"}):"补记",text:v});save();modal.close()};
 $("#analysisBtn").onclick=()=>{if(new Date()>=analysisMoment())generateDailyAnalysis()};
 $("#exportBtn").onclick=()=>{let blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`pcos90-backup-${localDate()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
-$("#importBtn").onclick=()=>$("#importFile").click();$("#importFile").onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{let v=safeParse(r.result);if(!v||typeof v!=="object"){alert("备份文件无效");return}if(confirm("导入会与当前记录合并，不会主动删除现有记录。继续吗？")){db=merge(db,norm(v));save();alert("备份已导入")}};r.readAsText(f)};
+$("#importBtn").onclick=()=>$("#importFile").click();$("#importFile").onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{let v=safeParse(r.result);if(!v||typeof v!=="object"){alert("备份文件无效");return}if(confirm("导入会与当前记录合并，不会主动删除现有记录。继续吗？")){db=merge(db,v);save();alert("备份已导入")}};r.readAsText(f)};
 render();tick();setInterval(tick,1000);
