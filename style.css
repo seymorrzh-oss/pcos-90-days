@@ -3,3 +3,17 @@
 .deletable{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;touch-action:pan-y}
 .holdHint{display:block;margin-top:8px;font-size:10px;color:#bbb;opacity:.72}
 .deletable:active{background:#faf9f6}
+
+/* V1.3.3: iOS Safari long-press fix */
+.deletable,.deletable *{
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  -webkit-touch-callout:none!important;
+  -webkit-user-drag:none!important;
+}
+.deletable{touch-action:pan-y;cursor:pointer}
+body.holding-record,body.holding-record *{
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  -webkit-touch-callout:none!important;
+}

@@ -139,24 +139,30 @@ function deleteRecord(type,key){
 }
 function bindLongPress(){
  document.querySelectorAll("[data-delete-type][data-delete-key]").forEach(el=>{
-   let timer=null, moved=false;
-   const start=e=>{
-     moved=false;
+   let timer=null,startX=0,startY=0,fired=false;
+   const cancel=()=>{if(timer){clearTimeout(timer);timer=null}};
+   el.addEventListener("pointerdown",e=>{
+     if(e.pointerType==="mouse" && e.button!==0)return;
+     fired=false;startX=e.clientX;startY=e.clientY;
+     document.body.classList.add("holding-record");
+     try{el.setPointerCapture(e.pointerId)}catch(_){}
      timer=setTimeout(()=>{
-       timer=null;
-       if(navigator.vibrate) navigator.vibrate(35);
+       timer=null;fired=true;
+       document.body.classList.remove("holding-record");
+       if(navigator.vibrate)navigator.vibrate(35);
        deleteRecord(el.dataset.deleteType,el.dataset.deleteKey);
      },650);
-   };
-   const cancel=()=>{if(timer){clearTimeout(timer);timer=null}};
-   el.addEventListener("touchstart",start,{passive:true});
-   el.addEventListener("touchmove",()=>{moved=true;cancel()},{passive:true});
-   el.addEventListener("touchend",cancel,{passive:true});
-   el.addEventListener("touchcancel",cancel,{passive:true});
-   el.addEventListener("mousedown",start);
-   el.addEventListener("mouseup",cancel);
-   el.addEventListener("mouseleave",cancel);
-   el.addEventListener("contextmenu",e=>{e.preventDefault();cancel();deleteRecord(el.dataset.deleteType,el.dataset.deleteKey)});
+   });
+   el.addEventListener("pointermove",e=>{
+     if(Math.hypot(e.clientX-startX,e.clientY-startY)>12){cancel();document.body.classList.remove("holding-record")}
+   });
+   ["pointerup","pointercancel","lostpointercapture"].forEach(ev=>el.addEventListener(ev,()=>{
+     cancel();document.body.classList.remove("holding-record")
+   }));
+   // iOS Safari native callout / text selection suppression.
+   el.addEventListener("contextmenu",e=>e.preventDefault());
+   el.addEventListener("selectstart",e=>e.preventDefault());
+   el.addEventListener("dragstart",e=>e.preventDefault());
  });
 }
 

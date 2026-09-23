@@ -1,4 +1,4 @@
-# PCOS 90 Days — V1.3.2
+# PCOS 90 Days — V1.3.3
 
 ## 本版重点
 - 新增「补记」：体重、饮食、运动、身体状态、优思明历史记录都可以选择过去日期。
@@ -51,3 +51,14 @@ Commit:
 
 Commit:
 `feat: add long-press delete with confirmation`
+
+
+## V1.3.3
+- 修复 iPhone / Safari 长按记录时优先触发文字选择的问题。
+- 长按区域及其子元素强制关闭文字选择和 iOS touch callout。
+- 改用 Pointer Events 处理长按；手指移动超过阈值会取消，避免正常上下滚动时误删。
+- 长按约 0.65 秒后仍需二次确认才删除。
+- 数据键继续固定为 `pcos90-data`。
+
+Commit:
+`fix: prevent iOS text selection on record long press`
