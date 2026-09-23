@@ -1,4 +1,4 @@
-# PCOS 90 Days — V1.3.3
+# PCOS 90 Days — V1.3.4
 
 ## 本版重点
 - 新增「补记」：体重、饮食、运动、身体状态、优思明历史记录都可以选择过去日期。
@@ -53,12 +53,26 @@ Commit:
 `feat: add long-press delete with confirmation`
 
 
-## V1.3.3
-- 修复 iPhone / Safari 长按记录时优先触发文字选择的问题。
-- 长按区域及其子元素强制关闭文字选择和 iOS touch callout。
-- 改用 Pointer Events 处理长按；手指移动超过阈值会取消，避免正常上下滚动时误删。
-- 长按约 0.65 秒后仍需二次确认才删除。
-- 数据键继续固定为 `pcos90-data`。
+## V1.3.3 — 修复删除后旧记录复活
+- 旧版 localStorage 自动迁移现在**只执行一次**。
+- 首次迁移完成后写入 `pcos90-legacy-migration-complete=1`。
+- 后续启动只读取永久数据库 `pcos90-data`，不会再次把 V1.0 / V1.1 / V1.2 的旧记录自动合并回来。
+- 旧 key 不主动删除，作为被动保险副本保留；程序不会自动读取它们。
+- 因此长按删除后，记录不会因为刷新页面而从旧数据库“复活”。
+- 继续兼容现有 V1.3.x 数据，不更换永久数据库 key。
+
+### 升级后
+如果 10:10 的旧早餐目前仍显示，请在 V1.3.3 中再长按删除一次并确认。此后刷新页面也不会自动回来。
 
 Commit:
-`fix: prevent iOS text selection on record long press`
+`fix: make legacy data migration one-time only`
+
+
+## V1.3.4
+- 删除加入 tombstone；重复旧记录会一起删除且不再显示。
+- 新增鲜肉皮蛋馄饨/鲜肉馄饨按个估算。
+- 新增电烤鸡心/烤鸡心按串估算。
+- 支持 `鲜肉皮蛋馄饨12个 电烤鸡心2串`。
+- 热量结果标记“估算”。
+
+Commit: `fix: persist deletions and add wonton chicken-heart estimates`
