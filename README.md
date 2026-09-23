@@ -1,4 +1,4 @@
-# PCOS 90 Days — V1.3.1
+# PCOS 90 Days — V1.3.2
 
 ## 本版重点
 - 新增「补记」：体重、饮食、运动、身体状态、优思明历史记录都可以选择过去日期。
@@ -40,3 +40,14 @@
 
 Commit:
 `fix: improve natural food quantity parsing`
+
+
+## V1.3.2
+- 饮食记录支持长按约 0.65 秒删除。
+- 长按后弹出确认框；只有再次确认才真正删除。
+- 同样为运动和最近体重记录加入长按删除，便于修正误记。
+- 旧记录即使没有 `id` 也可以删除；新记录会自动生成稳定 ID。
+- 数据键继续固定为 `pcos90-data`，升级不会因版本号更换数据位置。
+
+Commit:
+`feat: add long-press delete with confirmation`
