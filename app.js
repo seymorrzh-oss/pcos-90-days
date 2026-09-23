@@ -39,8 +39,8 @@ function updatePill(n=new Date()){
 }
 // kcal 以常见份量/每单位估算；品牌餐品没有可靠官方值时只给区间
 const FOODS=[
- {n:["水煮蛋","煮鸡蛋","鸡蛋"],u:"piece",k:[70,85],msg:"提供优质蛋白质"},
- {n:["拿铁","热拿铁","冰拿铁"],u:"ml",base:280,k:[120,190],msg:"热量主要来自牛奶；是否加糖会明显影响结果"},
+ {n:["水煮蛋","煮鸡蛋","白煮蛋","鸡蛋"],u:"piece",k:[70,85],msg:"提供优质蛋白质"},
+ {n:["拿铁咖啡","热拿铁咖啡","冰拿铁咖啡","拿铁","热拿铁","冰拿铁"],u:"ml",base:280,k:[120,190],msg:"按普通牛奶、未额外加糖估算；奶种和糖浆会明显影响热量"},
  {n:["全脂牛奶"],u:"ml",base:250,k:[150,175],msg:"提供蛋白质和钙"},
  {n:["低脂牛奶"],u:"ml",base:250,k:[105,135],msg:"提供蛋白质和钙"},
  {n:["牛肉刀削面","刀削面"],u:"bowl",k:[550,850],msg:"一碗通常同时包含较多主食；牛肉提供蛋白质"},
@@ -71,21 +71,57 @@ const FOODS=[
  {n:["无糖可乐","零度可乐"],u:"serving",k:[0,10],msg:"几乎不提供能量"},
  {n:["可乐"],u:"serving",k:[130,250],msg:"主要提供添加糖"}
 ];
+function cnNum(s){
+ const map={"一":1,"二":2,"两":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9,"十":10,"半":0.5};
+ if(s in map)return map[s];
+ if(/^十[一二三四五六七八九]$/.test(s))return 10+map[s[1]];
+ if(/^[一二三四五六七八九]十$/.test(s))return map[s[0]]*10;
+ if(/^[一二三四五六七八九]十[一二三四五六七八九]$/.test(s))return map[s[0]]*10+map[s[2]];
+ return Number(s);
+}
 function numberNear(text,name,u){
- let i=text.indexOf(name), seg=text.slice(Math.max(0,i-5),i+name.length+20), m;
- if(u==="ml"){m=seg.match(/(\d+(?:\.\d+)?)\s*ml/i);return m?+m[1]:null}
- if(u==="g"){m=seg.match(/(\d+(?:\.\d+)?)\s*g/i);return m?+m[1]:null}
- m=seg.match(/[×xX*]\s*(\d+(?:\.\d+)?)/)||seg.match(/(\d+(?:\.\d+)?)\s*(个|只|块|片|碗|杯|根|份)/);return m?+m[1]:1
+ let i=text.indexOf(name), seg=text.slice(Math.max(0,i-8),i+name.length+28), m;
+ // Metric amounts may be before or after the food name.
+ if(u==="ml"){
+   m=seg.match(/(\d+(?:\.\d+)?)\s*(?:ml|毫升)/i);
+   return m?+m[1]:null;
+ }
+ if(u==="g"){
+   m=seg.match(/(\d+(?:\.\d+)?)\s*(?:g|克)/i);
+   return m?+m[1]:null;
+ }
+ // 1个 / x1 / 一杯 / 两块 etc.
+ m=seg.match(/[×xX*]\s*(\d+(?:\.\d+)?)/);
+ if(m)return +m[1];
+ m=seg.match(/(\d+(?:\.\d+)?)\s*(?:个|只|块|片|碗|杯|根|份|枚)/);
+ if(m)return +m[1];
+ m=seg.match(/(半|一|二|两|三|四|五|六|七|八|九|十|十一|十二|十三|十四|十五|十六|十七|十八|十九|二十)\s*(?:个|只|块|片|碗|杯|根|份|枚)/);
+ if(m)return cnNum(m[1]);
+ // Natural shorthand such as “水煮蛋1 拿铁...” or “鸡蛋2”
+ let after=text.slice(i+name.length,i+name.length+8);
+ m=after.match(/^(\d+(?:\.\d+)?)(?!\s*(?:ml|毫升|g|克))/i);
+ if(m)return +m[1];
+ return 1;
 }
 function analyze(text,note=""){
- let all=(text+" "+note).replace(/\s+/g,""),lo=0,hi=0,msg=[],veg=false,matched=0;
- FOODS.forEach(f=>{let name=f.n.find(n=>all.includes(n));if(!name)return;let idx=all.indexOf(name),around=all.slice(Math.max(0,idx-10),idx+name.length+14);if(/没喝|未喝|没吃|未吃|没动/.test(around))return;
+ let all=(text+" "+note)
+ .replace(/毫升/gi,"ml")
+ .replace(/克/gi,"g")
+ .replace(/[，、；;+＋]/g," ")
+ .replace(/咖啡拿铁/g,"拿铁咖啡")
+ .replace(/拿铁咖啡热/g,"热拿铁咖啡")
+ .replace(/拿铁咖啡冰/g,"冰拿铁咖啡")
+ .replace(/\s+/g,""),lo=0,hi=0,msg=[],veg=false,matched=0;
+ let used=[];
+ FOODS.forEach(f=>{let names=[...f.n].sort((a,b)=>b.length-a.length), name=names.find(n=>all.includes(n));if(!name)return;let idx=all.indexOf(name);
+ if(used.some(r=>idx>=r[0]&&idx<r[1]))return;
+ let around=all.slice(Math.max(0,idx-10),idx+name.length+20);if(/没喝|未喝|没吃|未吃|没动/.test(around))return;
  let q=numberNear(all,name,f.u);if(f.base&&q)q=q/f.base;else if(f.base&&!q)q=1;else q=q||1;
  // “只吃3个”优先
  let only=around.match(/只(?:吃|喝)(?:了)?(\d+(?:\.\d+)?)/);if(only&&(f.u==="piece"||f.u==="serving"))q=+only[1];
  // “剩1/4” -> 吃了3/4
  let left=around.match(/剩(?:了)?(\d+)\s*\/\s*(\d+)/);if(left&&+left[2]>0)q*=Math.max(0,1-(+left[1]/+left[2]));
- lo+=f.k[0]*q;hi+=f.k[1]*q;msg.push(f.msg);veg=veg||!!f.veg;matched++});
+ lo+=f.k[0]*q;hi+=f.k[1]*q;msg.push(f.msg);veg=veg||!!f.veg;matched++;used.push([idx,idx+name.length])});
  if(!matched)return {kcal:"暂无法估算",text:"本地食物库暂未识别到足够信息。请写清食物名称、数量和烹饪方式。"};
  let advice=veg?"；整体继续按实际份量记录即可。":"；这顿如果没有另外吃蔬菜/水果，膳食纤维可能偏少，下一餐正常补一份蔬菜即可，不需要少吃一顿补偿。";
  return {kcal:`约 ${Math.max(0,Math.round(lo/10)*10)}–${Math.max(0,Math.round(hi/10)*10)} kcal`,text:[...new Set(msg)].slice(0,3).join("；")+advice}
