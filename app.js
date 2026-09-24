@@ -212,6 +212,17 @@ function bindFoodEdit(){document.querySelectorAll("[data-edit-food]").forEach(bt
 
 function activeFor(k,type,date){let dead=new Set(db.deleted||[]);return db[k].filter(x=>(!date||x.date===date)&&!isDeleted(dead,x,type))}
 function sleepParts(s){let total=Number.isFinite(+s?.durationMinutes)?+s.durationMinutes:(+s?.hours||0)*60+(+s?.minutes||0);return {total,hours:Math.floor(total/60),minutes:total%60}}
+function shiftDate(dateStr,days){let [y,m,d]=dateStr.split("-").map(Number),x=new Date(y,m-1,d);x.setDate(x.getDate()+days);return localDate(x)}
+function renderHistory(date=$("#historyDate")?.value){
+ let box=$("#historyRecords");if(!box||!date)return;let foods=activeFor("foods","food",date),workouts=activeFor("workouts","workout",date),weights=activeFor("weights","weight",date),sleeps=activeFor("sleeps","sleep",date),bodies=activeFor("body","body",date),daily=db.dailyAnalyses.find(x=>x.date===date),groups=[];
+ if(foods.length)groups.push(`<div class="historyGroup"><b>🍽️ 饮食 · ${foods.length} 餐</b>${foods.map(x=>`<div class="historyItem"><span>${esc(x.meal||"饮食")} · ${esc(x.time||"")}</span><p>${esc(x.items||"")}</p><small>${esc(foodEstimateLabel(x))}</small></div>`).join("")}</div>`);
+ if(workouts.length)groups.push(`<div class="historyGroup"><b>🏃 运动 · ${workouts.reduce((a,x)=>a+(+x.minutes||0),0)} min</b>${workouts.map(x=>`<div class="historyItem"><span>${esc(x.type||"运动")} · ${esc(x.minutes||0)} min</span>${x.detail?`<p>${esc(x.detail)}</p>`:""}</div>`).join("")}</div>`);
+ if(sleeps.length)groups.push(`<div class="historyGroup"><b>😴 睡眠</b>${sleeps.map(x=>{let t=sleepParts(x);return `<div class="historyItem"><span>${t.hours} 小时 ${t.minutes} 分钟</span>${x.note?`<p>${esc(x.note)}</p>`:""}</div>`}).join("")}</div>`);
+ if(weights.length)groups.push(`<div class="historyGroup"><b>⚖️ 体重</b>${weights.map(x=>`<div class="historyItem"><span>${esc(x.value)} kg</span></div>`).join("")}</div>`);
+ if(bodies.length)groups.push(`<div class="historyGroup"><b>🙂 身体状态</b>${bodies.map(x=>`<div class="historyItem"><p>${esc(x.text||"")}</p></div>`).join("")}</div>`);
+ if(daily)groups.push(`<div class="historyGroup historyAnalysis"><b>✨ 当日分析</b>${daily.parts.map(p=>`<div class="historyItem"><span>${esc(p.title)}</span><p>${esc(p.text)}</p></div>`).join("")}</div>`);
+ box.className=groups.length?"historyList":"empty";box.innerHTML=groups.length?groups.join(""):`${esc(date)} 没有记录`;
+}
 function generateDailyAnalysis(date=localDate()){
  let foods=activeFor("foods","food",date),workouts=activeFor("workouts","workout",date),weights=activeFor("weights","weight",date),sleeps=activeFor("sleeps","sleep",date),bodies=activeFor("body","body",date),parts=[],sleep=sleeps.length?sleepParts(sleeps[sleeps.length-1]):null,workoutMins=workouts.reduce((a,x)=>a+(+x.minutes||0),0),weight=weights[weights.length-1];
  parts.push({title:"✨ 今日概览",text:`饮食：${foods.length?`${foods.length} 餐`:"未记录"} · 睡眠：${sleep?`${sleep.hours}h ${sleep.minutes}m`:"未记录"} · 运动：${workouts.length?`${workoutMins} min`:"未记录"} · 体重：${weight?`${weight.value} kg`:"未记录"} · 身体状态：${bodies.length?`${bodies.length} 条`:"未记录"}`});
@@ -238,7 +249,7 @@ function render(){
  : (migrated.alreadyDone
    ? "旧版迁移已完成。现在只使用 pcos90-data；删除的记录不会再被旧版本自动恢复。"
    : "未发现可迁移的旧数据。现在固定使用 pcos90-data。");
- updateAnalysisGate()
+ renderHistory();updateAnalysisGate()
 }
 const modal=$("#modal");$("#close").onclick=()=>modal.close();
 function dateField(v=localDate()){return `<div class="field"><label>日期</label><input id="recordDate" type="date" value="${v}" min="${db.settings.startDate}" max="${localDate()}"></div>`}
@@ -269,4 +280,5 @@ window.addBody=()=>{let v=$("#state").value.trim(),date=$("#recordDate").value;i
 $("#analysisBtn").onclick=()=>{if(new Date()>=analysisMoment())generateDailyAnalysis()};
 $("#exportBtn").onclick=()=>{let blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`pcos90-backup-${localDate()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
 $("#importBtn").onclick=()=>$("#importFile").click();$("#importFile").onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{let v=safeParse(r.result);if(!v||typeof v!=="object"){alert("备份文件无效");return}if(confirm("导入会与当前记录合并，不会主动删除现有记录。继续吗？")){db=merge(db,v);save();alert("备份已导入")}};r.readAsText(f)};
+let historyInput=$("#historyDate"),yesterday=shiftDate(localDate(),-1);historyInput.min=db.settings.startDate;historyInput.max=localDate();historyInput.value=yesterday>=db.settings.startDate?yesterday:localDate();historyInput.onchange=()=>renderHistory();$("#historyYesterday").onclick=()=>{historyInput.value=yesterday>=db.settings.startDate?yesterday:db.settings.startDate;renderHistory()};$("#historyToday").onclick=()=>{historyInput.value=localDate();renderHistory()};
 render();tick();setInterval(tick,1000);
