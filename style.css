@@ -8,3 +8,13 @@
 .dailyPart:nth-child(6){background:#eef5e8;border-color:#dbe9cf}
 .manualBox{margin:14px 0;border:1px solid #cfe7e1;border-radius:15px;background:#f4fbf9;overflow:hidden}.manualBox summary{cursor:pointer;padding:13px 14px;color:#087e6e;font-size:13px;font-weight:800;list-style:none}.manualBox summary::-webkit-details-marker{display:none}.manualBox summary::after{content:"＋";float:right}.manualBox[open] summary::after{content:"−"}.manualBox[open] summary{border-bottom:1px solid #dceee9}.manualBox>.field,.manualBox>.manualGrid{margin-left:14px;margin-right:14px}.manualGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.manualAnalysis{background:#edf8f5;border-color:#c8e6df}.entryActions{display:flex;justify-content:flex-end;margin-top:8px}.entryActions button{border:0;border-radius:10px;background:var(--soft);color:#087e6e;padding:7px 10px;font-size:12px;font-weight:800}@media(max-width:380px){.manualGrid{grid-template-columns:1fr}}
 .historyShortcuts{display:flex;gap:6px}.historyShortcuts button{border:0;border-radius:10px;background:var(--soft);color:#087e6e;padding:7px 10px;font-size:12px;font-weight:800}.historyDate{margin-top:0}.historyList{display:grid;gap:10px}.historyGroup{border:1px solid var(--line);border-radius:15px;background:#faf9f6;padding:12px}.historyGroup>b{display:block;color:#2d4943;margin-bottom:7px}.historyItem{padding:8px 0;border-top:1px solid #e9e7e1}.historyItem:first-of-type{border-top:0}.historyItem span{font-size:13px;font-weight:700}.historyItem p{margin:4px 0;color:var(--muted);font-size:12px;line-height:1.55}.historyItem small{color:#087e6e}.historyAnalysis{background:#f2fbf8;border-color:#d5ebe5}
+
+/* V1.5 — shared backfill date and bowel tracking */
+.dateContext{border:1px solid #c8e6df;border-radius:13px;background:var(--soft);color:#087e6e;padding:12px;font-weight:800;font-size:15px}
+.poopChoices{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.poopChoices button{border:1px solid var(--line);border-radius:15px;background:#faf9f6;padding:18px 10px;font:inherit;font-weight:700}
+.poopChoices button[aria-pressed="true"]{background:var(--soft);border-color:var(--accent);color:#087e6e;box-shadow:inset 0 0 0 1px var(--accent)}
+.backToPicker{display:block;margin:14px auto 0;border:0;background:none;color:#087e6e;padding:10px;font:inherit;font-size:13px}
+button:disabled{opacity:.45;cursor:not-allowed}.dailyPart:nth-child(7){background:#fff2e7;border-color:#f1ddc9}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(min-width:600px){.grid{grid-template-columns:repeat(3,1fr)}}
